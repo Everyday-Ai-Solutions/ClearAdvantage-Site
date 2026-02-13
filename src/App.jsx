@@ -146,7 +146,8 @@ const PRICING = {
   outsideOnly: 3.95,
   insideOut: 6.55,
   screenTrack: 2.10,
-  minimum: 137,
+  minimum: 135,
+  taxRate: 0.0734,
 };
 
 /* ── Window Types with CORRECT pane counts ── */
@@ -167,15 +168,11 @@ const WINDOW_TYPES_SPECIALTY = [
   { id: "transom", name: "Transom", desc: "Small horizontal window above a door", panes: 1, svg: "transom" },
   { id: "basement", name: "Basement / Egress", desc: "Small below-grade casement window", panes: 1, svg: "basement" },
   { id: "storm-door", name: "Storm Door", desc: "Full-view glass storm door", panes: 2, svg: "stormDoor" },
+  { id: "door-window", name: "Door with Window", desc: "Solid door with glass insert", panes: 1, svg: "doorWindow" },
+  { id: "half-moon", name: "Circle / Half Moon", desc: "Round or arched accent window", panes: 1, svg: "halfMoon" },
+  { id: "french", name: "French Pane / Grille", desc: "4×4 or smaller counts as one window", panes: 1, svg: "french" },
 ];
 const WINDOW_TYPES = [...WINDOW_TYPES_COMMON, ...WINDOW_TYPES_SPECIALTY];
-
-const FRENCH_PANE = {
-  id: "french",
-  name: "French Pane / Grille Windows",
-  desc: "Many small panes in a grid — needs in-person count",
-  svg: "french",
-};
 
 /* ── Dynamic Season Badge ── */
 const getSeasonBadge = () => {
@@ -434,6 +431,30 @@ const WindowSVG = ({ type, active }) => {
         <rect x="18" y="121" width="64" height="5" rx="1" fill={sill} opacity="0.7"/>
       </svg>
     ),
+    doorWindow: (
+      <svg viewBox="0 0 100 130" width="100" height="130">
+        <rect x="0" y="0" width="100" height="130" fill="#2a2520"/>
+        {[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(i => (
+          <line key={`dw${i}`} x1="0" y1={8 + i * 8} x2="100" y2={8 + i * 8} stroke="#3a3530" strokeWidth="0.6"/>
+        ))}
+        <rect x="22" y="4" width="56" height="122" rx="2" fill={frame}/>
+        <rect x="26" y="8" width="48" height="114" rx="1" fill={sill} opacity="0.4"/>
+        <rect x="30" y="14" width="40" height="50" rx="2" fill={glass}/>
+        <GlassShine x={30} y={14} w={40} h={50}/>
+        <rect x="48" y="66" width="6" height="3" rx="1" fill={frame}/>
+        <circle cx="51" cy="80" r="3" fill={handle}/>
+      </svg>
+    ),
+    halfMoon: (
+      <svg viewBox="0 0 100 130" width="100" height="130">
+        <rect x="10" y="45" width="80" height="60" rx="3" fill={frame}/>
+        <path d="M 15 100 L 15 55 A 35 35 0 0 1 85 55 L 85 100 Z" fill={frame}/>
+        <path d="M 20 95 L 20 58 A 30 30 0 0 1 80 58 L 80 95 Z" fill={glass}/>
+        <path d="M 22 60 A 28 28 0 0 1 35 52 L 25 70 Z" fill={highlight} opacity="0.5"/>
+        <line x1="50" y1="50" x2="50" y2="95" stroke={frame} strokeWidth="1.5"/>
+        <rect x="10" y="96" width="80" height="6" rx="2" fill={sill}/>
+      </svg>
+    ),
     french: (
       <svg viewBox="0 0 100 130" width="100" height="130">
         <rect x="10" y="5" width="80" height="115" rx="3" fill={frame}/>
@@ -450,8 +471,6 @@ const WindowSVG = ({ type, active }) => {
         <rect x="47" y="5" width="6" height="115" rx="1" fill={frame}/>
         <circle cx="44" cy="60" r="2.5" fill={handle}/>
         <circle cx="56" cy="60" r="2.5" fill={handle}/>
-        <circle cx="50" cy="95" r="12" fill="rgba(0,0,0,0.5)"/>
-        <text x="50" y="100" textAnchor="middle" fill={B.pl} fontSize="16" fontWeight="bold">?</text>
       </svg>
     ),
   };
@@ -576,11 +595,12 @@ function EstimatorPage({ onBack }) {
 
   const tiers = SERVICE_LEVELS.map((s) => {
     const raw = totalPanes * s.price;
-    const est = Math.max(raw, totalWindows > 0 ? PRICING.minimum : 0);
-    return { ...s, raw, estimate: est, belowMin: raw > 0 && raw < PRICING.minimum };
+    const beforeTax = Math.max(raw, totalWindows > 0 ? PRICING.minimum : 0);
+    const est = Math.round(beforeTax * (1 + PRICING.taxRate));
+    return { ...s, raw, estimate: est, beforeTax, belowMin: raw > 0 && raw < PRICING.minimum };
   });
 
-  const sqftEstimate = sqft ? Math.round((parseInt(sqft) + 1000) / 10) : null;
+  const sqftEstimate = sqft ? Math.round((parseInt(sqft) + 1000) / 10 * (1 + PRICING.taxRate)) : null;
 
   const updateQty = (id, delta) => {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) + delta) }));
@@ -706,16 +726,8 @@ function EstimatorPage({ onBack }) {
               <div style={S.windowGrid} className="win-grid">
                 {WINDOW_TYPES_SPECIALTY.map(renderWindowCard)}
               </div>
-              <div style={{marginTop:14}}>
-                <div style={S.frenchCard}>
-                  <div style={S.windowSvgWrap}><WindowSVG type="french" active={false} /></div>
-                  <div style={S.windowInfo}>
-                    <span style={S.windowName}>{FRENCH_PANE.name}</span>
-                    <span style={S.windowDesc}>{FRENCH_PANE.desc}</span>
-                  </div>
-                  <div style={S.frenchNote}>Too many small panes to estimate online.<br/>We'll count these in person.</div>
-                  <a href="sms:2188502182" className="ca-btn ca-btn-accent-sm" style={S.frenchCallBtn}>💬 Text for Quote</a>
-                </div>
+              <div style={{marginTop:14,padding:"10px 16px",background:"rgba(245,158,11,0.06)",borderRadius:10,border:`1px dashed ${B.ac}40`}}>
+                <span style={{fontSize:13,color:B.ac,lineHeight:1.5,fontWeight:500}}>📐 French pane windows larger than 4×4 need an in-person count — <a href="sms:2188502182" style={{color:B.ac,textDecoration:"underline"}}>text us</a> for a quote.</span>
               </div>
             </div>
           )}
@@ -761,9 +773,9 @@ function EstimatorPage({ onBack }) {
                       <span style={S.tierDesc}>{t.desc}</span>
                       <div style={S.tierPriceWrap}>
                         <span style={S.tierDollar}>$</span>
-                        <span style={{...S.tierPrice,...(t.popular?S.tierPricePopular:{})}}>{Math.max(t.estimate,PRICING.minimum)}</span>
+                        <span style={{...S.tierPrice,...(t.popular?S.tierPricePopular:{})}}>{Math.max(t.estimate,Math.round(PRICING.minimum*(1+PRICING.taxRate)))}</span>
                       </div>
-                      {t.estimate < PRICING.minimum && <span style={S.tierMin}>${PRICING.minimum} minimum applies</span>}
+                      {t.estimate < Math.round(PRICING.minimum*(1+PRICING.taxRate)) && <span style={S.tierMin}>${Math.round(PRICING.minimum*(1+PRICING.taxRate))} minimum applies</span>}
                     </div>
                   ))}
                 </div>
@@ -780,12 +792,12 @@ function EstimatorPage({ onBack }) {
                       <span style={S.tierDollar}>$</span>
                       <span style={{ ...S.tierPrice, ...(t.popular ? S.tierPricePopular : {}) }}>{Math.round(t.estimate)}</span>
                     </div>
-                    {t.belowMin && <span style={S.tierMin}>${PRICING.minimum} minimum applies</span>}
+                    {t.belowMin && <span style={S.tierMin}>${Math.round(PRICING.minimum*(1+PRICING.taxRate))} minimum applies</span>}
                   </div>
                 ))}
               </div>
             )}
-            <div style={S.disclaimer}>This is a ballpark based on {mode==="sqft"?"your home's square footage":"standard window sizes"}. Final pricing confirmed after we see the job. Factors like height, accessibility, hard water stains, or construction debris may affect final price.</div>
+            <div style={S.disclaimer}>This is a ballpark based on {mode==="sqft"?"your home's square footage":"standard window sizes"} and includes 7.34% sales tax. Final pricing confirmed after we see the job. Factors like height, accessibility, hard water stains, or construction debris may affect final price.</div>
 
             {/* Trust Badges */}
             <div style={{display:"flex",flexWrap:"wrap",gap:10,justifyContent:"center",margin:"20px 0 24px"}}>{[["🛡️","Fully Insured"],["🌧️","7-Day Guarantee"],["⭐","5.0 on Google"],["👨‍👩‍👦","Family Owned"],["📍","Local Since 2015"]].map(([ic,tx],i)=><div key={i} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.05)",borderRadius:10,padding:"8px 14px",border:"1px solid rgba(255,255,255,0.08)"}}><span style={{fontSize:14}}>{ic}</span><span style={{color:B.lg,fontSize:12,fontWeight:600}}>{tx}</span></div>)}</div>
@@ -793,7 +805,7 @@ function EstimatorPage({ onBack }) {
             <div style={S.resultActions}>
               <a href="sms:2188502182" className="ca-btn ca-btn-primary" style={S.callBtn}>💬 Text Tina</a>
               <a href="tel:2188502182" className="ca-btn ca-btn-secondary-brand" style={S.textBtn}>📞 Call Us</a>
-              <button onClick={()=>{const summary=mode==="sqft"?`Clear Advantage Window Cleaning — Estimate\n${sqft} sq ft home\n\nOutside Only: ~$${Math.round(sqftEstimate*0.6)}\nInside & Out: ~$${sqftEstimate}\nThe Works: ~$${Math.round(sqftEstimate*1.15)}\n\nThis is a ballpark — final price confirmed on-site.\n📱 Text Tina: (218) 850-2182`:`Clear Advantage Window Cleaning — Estimate\n${totalWindows} windows (${totalPanes} panes)\n\n${tiers.map(t=>`${t.label}: $${Math.round(t.estimate)}`).join("\n")}\n\nThis is a ballpark — final price confirmed on-site.\n📱 Text Tina: (218) 850-2182`;navigator.clipboard?.writeText(summary).then(()=>setSavedEstimate(true)).catch(()=>{});}} className="ca-btn ca-btn-secondary" style={{padding:"12px 20px",fontSize:14}}>{savedEstimate?"✅ Copied!":"📋 Save My Estimate"}</button>
+              <button onClick={()=>{const summary=mode==="sqft"?`Clear Advantage Window Cleaning — Estimate\n${sqft} sq ft home\n\nOutside Only: ~$${Math.round(sqftEstimate*0.6)}\nInside & Out: ~$${sqftEstimate}\nThe Works: ~$${Math.round(sqftEstimate*1.15)}\n\nIncludes 7.34% sales tax.\nThis is a ballpark — final price confirmed on-site.\n📱 Text Tina: (218) 850-2182`:`Clear Advantage Window Cleaning — Estimate\n${totalWindows} windows (${totalPanes} panes)\n\n${tiers.map(t=>`${t.label}: $${Math.round(t.estimate)}`).join("\n")}\n\nIncludes 7.34% sales tax.\nThis is a ballpark — final price confirmed on-site.\n📱 Text Tina: (218) 850-2182`;navigator.clipboard?.writeText(summary).then(()=>setSavedEstimate(true)).catch(()=>{});}} className="ca-btn ca-btn-secondary" style={{padding:"12px 20px",fontSize:14}}>{savedEstimate?"✅ Copied!":"📋 Save My Estimate"}</button>
             </div>
             {!leadSubmitted ? (
               <div style={{marginTop:24,background:"rgba(255,255,255,0.04)",borderRadius:16,padding:"24px",border:"1px solid rgba(255,255,255,0.08)"}}>
