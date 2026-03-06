@@ -600,7 +600,7 @@ function EstimatorPage({ onBack }) {
     return { ...s, raw, estimate: est, beforeTax, belowMin: raw > 0 && raw < PRICING.minimum };
   });
 
-  const sqftEstimate = sqft ? Math.round((parseInt(sqft) + 1000) / 10 * (1 + PRICING.taxRate)) : null;
+  const sqftEstimate = sqft ? Math.round((parseInt(sqft) + 1000) / 9.7 * (1 + PRICING.taxRate)) : null;
 
   const updateQty = (id, delta) => {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) + delta) }));
