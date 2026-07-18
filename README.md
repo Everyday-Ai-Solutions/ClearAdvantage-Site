@@ -1,4 +1,16 @@
-# Clear Advantage Window Cleaning — Website
+---
+owner: aaron
+status: current
+domain: ca
+task_types:
+- orientation
+sensitivity: low
+preferred_model_tier: cheap
+verifiability_level: high
+source_of_truth: false
+---
+
+# Clear Advantage Window Cleaning  -  Website
 
 Live site for [clearadvantagedl.com](https://clearadvantagedl.com)
 
@@ -80,4 +92,4 @@ The AI chat widget calls `/api/chat` which routes to a Netlify serverless functi
 
 ## EmailJS (Lead Capture)
 
-The estimator tool and chat both send lead emails via EmailJS. The service/template IDs are already configured in the code. No extra setup needed — leads go to your inbox.
+The estimator tool and chat both send lead emails via EmailJS. The service/template IDs are already configured in the code. No extra setup needed  -  leads go to your inbox.
